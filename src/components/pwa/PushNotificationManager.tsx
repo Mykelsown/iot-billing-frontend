@@ -13,32 +13,28 @@ function urlB64ToUint8Array(base64String: string): Uint8Array {
   return output;
 }
 
+function isPushSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+}
+
 export function PushNotificationManager() {
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isSupported = isPushSupported();
 
   useEffect(() => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setIsSupported(false);
-      return;
-    }
-    setIsSupported(true);
+    if (!isSupported || Notification.permission !== 'granted') return;
 
-    if (Notification.permission === 'granted') {
-      checkSubscription();
-    }
-  }, []);
-
-  const checkSubscription = async () => {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      setIsSubscribed(!!subscription);
-    } catch {
-      setIsSubscribed(false);
-    }
-  };
+    navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((subscription) => {
+        setIsSubscribed(!!subscription);
+      })
+      .catch(() => {
+        setIsSubscribed(false);
+      });
+  }, [isSupported]);
 
   const subscribe = useCallback(async () => {
     if (Notification.permission === 'denied') {

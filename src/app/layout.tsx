@@ -25,9 +25,8 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'IoT Billing',
   },
-  other: {
-    'mobile-web-app-capable': 'yes',
-    'apple-touch-fullscreen': 'yes',
+  icons: {
+    apple: '/icons/icon.svg',
   },
 };
 
@@ -47,9 +46,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon.svg" />
-      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />

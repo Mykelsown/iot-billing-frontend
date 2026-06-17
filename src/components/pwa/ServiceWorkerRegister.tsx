@@ -22,9 +22,7 @@ export function ServiceWorkerRegister() {
             }
           });
         })
-        .catch(() => {
-
-        });
+        .catch(() => {});
     }
   }, []);
 

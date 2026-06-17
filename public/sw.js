@@ -73,7 +73,7 @@ async function cacheFirst(request) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (error) {
+  } catch {
     return new Response('Offline', { status: 503 });
   }
 }
@@ -86,7 +86,7 @@ async function networkFirst(request) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (error) {
+  } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
     return new Response('Offline', { status: 503 });
@@ -104,7 +104,7 @@ async function networkFirstWithTimeout(request, timeoutMs) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (error) {
+  } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
     return new Response(JSON.stringify({ error: 'Offline' }), {
@@ -134,7 +134,7 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       self.registration.showNotification(data.title || 'IoT Billing Service', options)
     );
-  } catch (error) {
+  } catch {
     const title = 'IoT Billing Service';
     const options = {
       body: event.data.text(),
