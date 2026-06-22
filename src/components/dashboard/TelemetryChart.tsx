@@ -310,6 +310,7 @@ export function TelemetryChart({
       }
     },
     [
+      chartPalette,
       color,
       height,
       isLoading,

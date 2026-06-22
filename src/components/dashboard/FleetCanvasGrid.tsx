@@ -4,7 +4,6 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import type { FleetView } from '@/types';
 import type { PositionResult } from '@/workers/fleetPosition.worker';
 
-
 interface FleetCanvasGridProps {
   fleets: FleetView[];
   cellSize?: number;
@@ -255,7 +254,7 @@ export function FleetCanvasGrid({ fleets, cellSize = 80 }: FleetCanvasGridProps)
       string,
       { cell: PositionResult; fleet: DisplayFleet; isHovered: boolean }[]
     > = {
-      [activeColor]: [],  // Active
+      [activeColor]: [], // Active
       [warningColor]: [], // Degraded
       [criticalColor]: [], // Inactive
     };

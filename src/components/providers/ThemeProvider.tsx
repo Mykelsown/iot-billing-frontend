@@ -124,11 +124,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [mode, setMode, toggle, isHighContrast, chartPalette, fontSizeScale, prefersReducedMotion],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

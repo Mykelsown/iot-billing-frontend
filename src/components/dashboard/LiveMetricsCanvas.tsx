@@ -173,7 +173,10 @@ export function LiveMetricsCanvas({ stream, metrics, height = 300 }: LiveMetrics
       ctx.clearRect(0, 0, w, h);
 
       // Use the theme-aware chart palette instead of hardcoded COLORS
-      const colors = chartPalette.length >= metrics.length ? chartPalette : ['#5ec962', '#fca50a', '#21918c', '#932667', '#fcffa4'];
+      const colors =
+        chartPalette.length >= metrics.length
+          ? chartPalette
+          : ['#5ec962', '#fca50a', '#21918c', '#932667', '#fcffa4'];
 
       metrics.forEach((metric, idx) => {
         const color = colors[idx % colors.length] ?? '#ffffff';

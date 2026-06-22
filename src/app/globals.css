@@ -25,14 +25,14 @@
   --text-shadow: none;
 
   /* Viridis‑inspired chart palette (colorblind‑safe) */
-  --chart-active: #5ec962;        /* green, distinguishable */
-  --chart-warning: #fca50a;       /* amber */
-  --chart-critical: #dd513a;      /* red‑orange */
-  --chart-line-1: #fde725;        /* viridis yellow */
-  --chart-line-2: #5ec962;        /* viridis green */
-  --chart-line-3: #21918c;        /* viridis teal */
-  --chart-line-4: #3b528b;        /* viridis blue */
-  --chart-line-5: #440154;        /* viridis purple */
+  --chart-active: #5ec962; /* green, distinguishable */
+  --chart-warning: #fca50a; /* amber */
+  --chart-critical: #dd513a; /* red‑orange */
+  --chart-line-1: #fde725; /* viridis yellow */
+  --chart-line-2: #5ec962; /* viridis green */
+  --chart-line-3: #21918c; /* viridis teal */
+  --chart-line-4: #3b528b; /* viridis blue */
+  --chart-line-5: #440154; /* viridis purple */
   --chart-grid: rgba(255, 255, 255, 0.06);
   --chart-text: rgba(255, 255, 255, 0.7);
 
@@ -149,8 +149,9 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   text-shadow: var(--text-shadow);
   font-size: calc(var(--text-base) * var(--font-size-scale));
-  transition: background-color calc(var(--transition-duration) * var(--motion-scale)),
-              color calc(var(--transition-duration) * var(--motion-scale));
+  transition:
+    background-color calc(var(--transition-duration) * var(--motion-scale)),
+    color calc(var(--transition-duration) * var(--motion-scale));
 }
 
 @theme inline {
