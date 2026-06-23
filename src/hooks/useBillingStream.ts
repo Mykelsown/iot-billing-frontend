@@ -106,17 +106,6 @@ export function useBillingStream(handler: BillingUpdateHandler) {
           },
           requiresFreshToken ? 0 : backoffDelayMs,
         );
-    ws.onmessage = (event) => {
-      try {
-        const update: BillingUpdate = JSON.parse(event.data);
-        const { isUserInteracting: interacting, queueTelemetryUpdate } = useCurrencyPref.getState();
-
-        if (interacting) {
-          // Queue the update — delivered when interaction ends (see below)
-          queueTelemetryUpdate({ deviceId: update.deviceId, amount: update.amount });
-        } else {
-          handlerRef.current([update]);
-        }
       } catch {
         reconnectTimer = setTimeout(() => {
           void scheduleReconnect(true);
