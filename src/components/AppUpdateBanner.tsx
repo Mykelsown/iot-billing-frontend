@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react';
 import { useFormTracker } from '@/stores/useFormTracker';
 
 export function AppUpdateBanner() {
-  const [pendingReload, setPendingReload] = useState(false);
+  const [pendingReload, setPendingReload] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('pendingReload') === 'true';
+  });
   const { hasDirtyForms } = useFormTracker();
-
-  useEffect(() => {
-    const pending = localStorage.getItem('pendingReload') === 'true';
-    setPendingReload(pending);
-  }, []);
 
   const handleReloadNow = () => {
     localStorage.removeItem('pendingReload');
@@ -18,13 +16,18 @@ export function AppUpdateBanner() {
   };
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
     if (pendingReload && !hasDirtyForms()) {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         localStorage.removeItem('pendingReload');
         location.reload();
       }, 500);
-      return () => clearTimeout(timer);
     }
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [pendingReload, hasDirtyForms]);
 
   if (!pendingReload) return null;
