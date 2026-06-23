@@ -9,9 +9,47 @@ import type { PositionResult } from '@/workers/fleetPosition.worker';
 interface FleetCanvasGridProps {
   fleets: FleetView[];
   cellSize?: number;
+  /** Called when a cell is clicked (with the fleet) or the selection is cleared (null). */
+  onSelectFleet?: (fleet: FleetView | null) => void;
 }
 
 const MEMORY_LIMIT = 10 * 1024 * 1024; // 10MB
+
+/**
+ * Map canvas-local coordinates to a fleet index, or null if the point misses a
+ * cell. Pure + shared by hover and click so both resolve a position the same
+ * way against the *current* grid geometry.
+ */
+export function hitTestCell(
+  x: number,
+  y: number,
+  cellSize: number,
+  cols: number,
+  rows: number,
+  count: number,
+): number | null {
+  if (cellSize <= 0) return null;
+  const col = Math.floor(x / cellSize);
+  const row = Math.floor(y / cellSize);
+  if (col < 0 || col >= cols || row < 0 || row >= rows) return null;
+  const idx = row * cols + col;
+  return idx >= 0 && idx < count ? idx : null;
+}
+
+/**
+ * Resolve the currently-selected fleet by its stable id against the latest
+ * fleet list. Selecting by id (not array index) is what makes selection
+ * stale-proof: when the list is replaced by a new batch, the detail panel
+ * re-derives from current data — it shows the updated fleet, or clears if the
+ * fleet is gone. There is no closure or index to drift out of sync.
+ */
+export function resolveSelectedFleet<T extends { fleetId: string }>(
+  fleets: T[],
+  selectedId: string | null,
+): T | null {
+  if (!selectedId) return null;
+  return fleets.find((f) => f.fleetId === selectedId) ?? null;
+}
 
 function estimateGridMemory(fleets: FleetView[]): number {
   try {
@@ -43,7 +81,7 @@ function getFleetRegion(fleet: DisplayFleet): string {
   return regions[Math.abs(hash) % regions.length] ?? 'Unknown';
 }
 
-export function FleetCanvasGrid({ fleets, cellSize = 80 }: FleetCanvasGridProps) {
+export function FleetCanvasGrid({ fleets, cellSize = 80, onSelectFleet }: FleetCanvasGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -52,6 +90,9 @@ export function FleetCanvasGrid({ fleets, cellSize = 80 }: FleetCanvasGridProps)
 
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  // Selection is keyed by stable fleetId (not array index) so it can never
+  // point at the wrong fleet after the list updates — see resolveSelectedFleet.
+  const [selectedFleetId, setSelectedFleetId] = useState<string | null>(null);
   const [visibleCells, setVisibleCells] = useState<PositionResult[]>([]);
   const [viewportBounds, setViewportBounds] = useState({
     xMin: 0,
@@ -404,36 +445,46 @@ export function FleetCanvasGrid({ fleets, cellSize = 80 }: FleetCanvasGridProps)
     draw();
   }, [draw]);
 
+  // Resolve the fleet index under a pointer event using the shared hit-test.
+  const fleetIndexAt = (e: React.MouseEvent<HTMLCanvasElement>): number | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return hitTestCell(
+      e.clientX - rect.left,
+      e.clientY - rect.top,
+      currentCellSize,
+      cols,
+      rows,
+      activeFleets.length,
+    );
+  };
+
   // Track mouse coordinates for hover state
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const col = Math.floor(x / currentCellSize);
-    const row = Math.floor(y / currentCellSize);
-
-    if (col >= 0 && col < cols && row >= 0 && row < rows) {
-      const idx = row * cols + col;
-      if (idx < activeFleets.length) {
-        if (hoveredIndex !== idx) {
-          setHoveredIndex(idx);
-        }
-        return;
-      }
-    }
-
-    if (hoveredIndex !== null) {
-      setHoveredIndex(null);
-    }
+    setHoveredIndex(fleetIndexAt(e));
   };
 
   const handleMouseLeave = () => {
     setHoveredIndex(null);
   };
+
+  // Select the clicked fleet by its stable id (or clear on a miss). The detail
+  // panel derives from current data via resolveSelectedFleet, so the selection
+  // stays correct across data updates.
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const idx = fleetIndexAt(e);
+    const fleet = idx !== null ? (activeFleets[idx] ?? null) : null;
+    setSelectedFleetId(fleet ? fleet.fleetId : null);
+    onSelectFleet?.(fleet);
+  };
+
+  const clearSelection = () => {
+    setSelectedFleetId(null);
+    onSelectFleet?.(null);
+  };
+
+  const selectedFleet = resolveSelectedFleet(activeFleets, selectedFleetId);
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey) {
@@ -502,11 +553,49 @@ export function FleetCanvasGrid({ fleets, cellSize = 80 }: FleetCanvasGridProps)
           ref={canvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
           style={{ width, height, display: 'block' }}
-          className="rounded-lg cursor-crosshair"
+          className="rounded-lg cursor-pointer"
           aria-label={`Fleet grid with ${activeFleets.length} nodes`}
         />
       </div>
+
+      {/* Selected fleet detail — derived from current data by id, so it never
+          shows a stale fleet after the list updates. */}
+      {selectedFleet && (
+        <div className="mt-3 rounded-lg border border-gray-800 bg-gray-900 p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-gray-100">{selectedFleet.name}</h4>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-gray-500 hover:text-gray-300"
+              title="Clear selection"
+            >
+              Clear
+            </button>
+          </div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-gray-400">
+            <div className="flex justify-between">
+              <dt>Status</dt>
+              <dd className="text-gray-200">{selectedFleet.status}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Devices</dt>
+              <dd className="text-gray-200">
+                {selectedFleet.activeCount}/{selectedFleet.deviceCount}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Power</dt>
+              <dd className="text-gray-200">{selectedFleet.totalPowerOutput.toFixed(0)} W</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Fleet ID</dt>
+              <dd className="font-mono text-xs text-gray-300">{selectedFleet.fleetId}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
     </div>
   );
 }
